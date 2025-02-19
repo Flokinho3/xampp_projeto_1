@@ -1,0 +1,38 @@
+.alerta {
+    position: fixed;
+    top: -100px; /* Começa fora da tela */
+    left: 0;
+    width: 100%;
+    padding: 15px;
+    text-align: center;
+    z-index: 1000;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    font-size: 16px;
+    color: #fff;
+    animation: slideDown 0.5s forwards; /* Animação de entrada */
+}
+
+.alerta.erro {
+    background-color: #f44336; /* Vermelho */
+}
+
+.alerta.sucesso {
+    background-color: #4CAF50; /* Verde */
+}
+
+@keyframes slideDown {
+    to {
+        top: 0; /* Move para a posição final */
+    }
+}
+
+@keyframes slideUp {
+    to {
+        top: -100px; /* Move para fora da tela */
+    }
+}
+
+/* Adiciona uma classe para a animação de saída */
+.alerta.sair {
+    animation: slideUp 0.5s forwards;
+}
