@@ -1,110 +1,201 @@
 <?php
-/**
- * Tabela usuarios
- * 
- * ID (int) - Chave primária, auto incremento
- * Email (text) - Email do usuário
- * Senha (text) - Senha criptografada
- * Niki (text) - Apelido/nickname do usuário
- * Img (text) - Caminho da imagem de perfil, padrão 'CSS/img/Fundo_padrao.jpeg'
- * Data_naci (date) - Data de nascimento
- * Nome (text) - Nome completo
- */
-
-/**
-
- */
-
-function conexao(){
-    $host = "localhost";
-    $user = "root";
-    $pass = "";
-    $db = "registro";
-    if($con = new mysqli($host, $user, $pass, $db)){
-        return $con;
-    }
+//verifica se ja tem uma sessão iniciada
+if (!isset($_SESSION)) {
+    session_start();
 }
 
-function login($email, $senha) {
-    $con = conexao();
-    
-    // Usar prepared statements para evitar injeção de SQL
-    $sql = "SELECT * FROM usuarios WHERE email = ?";
-    $stmt = $con->prepare($sql);
-    $stmt->bind_param("s", $email);
-    $stmt->execute();
-    $res = $stmt->get_result();
-    
-    if ($res->num_rows > 0) {
-        $row = $res->fetch_assoc();
-        if (password_verify($senha, $row['Senha'])) {
-            $_SESSION['email'] = $email;   
-            $_SESSION['nome'] = $row['Nome'];
-            $_SESSION['data_naci'] = $row['Data_naci'];
-            $_SESSION['niki'] = $row['Niki'];
-            $_SESSION['img'] = $row['Img'];
-            $_SESSION['ID'] = $row['ID'];
-            return "sucesso";
-        } else {
-            return "Senha incorreta";
+/* ========================================================
+   Funções para manipulação dos usuários via arquivo JSON
+   ======================================================== */
+
+// Define o caminho do arquivo JSON de usuários
+define('USERS_FILE', __DIR__ . '/usuarios.json');
+
+// Carrega os usuários a partir do arquivo JSON
+function load_users() {
+    if (!file_exists(USERS_FILE)) {
+        // Se o arquivo não existir, cria-o com um array vazio
+        file_put_contents(USERS_FILE, json_encode([]));
+    }
+    $json = file_get_contents(USERS_FILE);
+    $users = json_decode($json, true);
+    if ($users === null) {
+        $users = [];
+    }
+    return $users;
+}
+
+// Salva o array de usuários no arquivo JSON
+function save_users($users) {
+    file_put_contents(USERS_FILE, json_encode($users, JSON_PRETTY_PRINT));
+}
+
+// Retorna o próximo ID disponível (auto incremento)
+function get_new_user_id($users) {
+    if (empty($users)) {
+        return 1;
+    }
+    $max = 0;
+    foreach($users as $user) {
+        if ($user['ID'] > $max) {
+            $max = $user['ID'];
         }
-    } else {
-        return "Email não encontrado";
     }
+    return $max + 1;
 }
 
+// Função de cadastro de usuário usando JSON
 function Cadastro($email, $senha, $nome, $data_naci, $niki) {
-    $con = conexao();
-    $senha = password_hash($senha, PASSWORD_DEFAULT);
+    $users = load_users();
     
-    // Verificar se o email já existe
-    $sql = "SELECT * FROM usuarios WHERE email = ?";
-    $stmt = $con->prepare($sql);
-    $stmt->bind_param("s", $email);
-    $stmt->execute();
-    $res = $stmt->get_result();
-    
-    if ($res->num_rows > 0) {
-        return "Email já cadastrado";
+    // Verifica se o email ou niki já existem
+    foreach ($users as $user) {
+        if ($user['Email'] === $email) {
+            return "Email já cadastrado";
+        }
+        if ($user['Niki'] === $niki) {
+            return "Niki já cadastrado";
+        }
     }
     
-    // Verificar se o niki já existe
-    $sql = "SELECT * FROM usuarios WHERE niki = ?";
-    $stmt = $con->prepare($sql);
-    $stmt->bind_param("s", $niki);
-    $stmt->execute();
-    $res = $stmt->get_result();
+    $new_id = get_new_user_id($users);
+    $hashed_password = password_hash($senha, PASSWORD_DEFAULT);
     
-    if ($res->num_rows > 0) {
-        return "Niki já cadastrado";
-    }
+    $new_user = [
+        "ID"         => $new_id,
+        "Email"      => $email,
+        "Senha"      => $hashed_password,
+        "Niki"       => $niki,
+        "Img"        => 'CSS/img/Fundo_padrao.jpeg',
+        "Data_naci"  => $data_naci,
+        "Nome"       => $nome,
+    ];
     
-    // Inserir no banco de dados
-    $sql = "INSERT INTO usuarios (email, senha, nome, data_naci, niki) VALUES (?, ?, ?, ?, ?)";
-    $stmt = $con->prepare($sql);
-    $stmt->bind_param("sssss", $email, $senha, $nome, $data_naci, $niki);
+    $users[] = $new_user;
+    save_users($users);
     
-    if ($stmt->execute()) {
-        return "sucesso";
-    } else {
-        return "Erro ao cadastrar";
-    }
+    return "sucesso";
 }
+
+// Função de login usando JSON
+function login($email, $senha) {
+    $users = load_users();
+    
+    foreach($users as $user) {
+        if ($user['Email'] === $email) {
+            if (password_verify($senha, $user['Senha'])) {
+                $_SESSION['email']     = $user['Email'];
+                $_SESSION['nome']      = $user['Nome'];
+                $_SESSION['data_naci'] = $user['Data_naci'];
+                $_SESSION['niki']      = $user['Niki'];
+                $_SESSION['img']       = $user['Img'];
+                $_SESSION['ID']        = $user['ID'];
+                return "sucesso";
+            } else {
+                return "Senha incorreta";
+            }
+        }
+    }
+    return "Email não encontrado";
+}
+
+// Pesquisa o nome do usuário pelo ID
+function Pesquisar_nome_user($ID) {
+    $users = load_users();
+    foreach ($users as $user) {
+        if ($user['ID'] == $ID) {
+            return $user['Nome'];
+        }
+    }
+    return null;
+}
+
+// Pesquisa o email do usuário pelo ID
+function Pesquisar_email_user($ID) {
+    $users = load_users();
+    foreach ($users as $user) {
+        if ($user['ID'] == $ID) {
+            return $user['Email'];
+        }
+    }
+    return null;
+}
+
+// Pesquisa a imagem do usuário pelo ID
+function Pesquisar_img_user($ID) {
+    $users = load_users();
+    foreach ($users as $user) {
+        if ($user['ID'] == $ID) {
+            return $user['Img'];
+        }
+    }
+    return null;
+}
+
+// Atualiza a imagem do usuário e salva no JSON
+function Atualizar_img($ID, $img) {
+    $users = load_users();
+    foreach ($users as &$user) {
+        if ($user['ID'] == $ID) {
+            $user['Img'] = $img;
+            save_users($users);
+            $_SESSION['sucesso'] = "Imagem atualizada com sucesso";
+            header('Location: ../Home/Perfil.php');
+            exit();
+        }
+    }
+    $_SESSION['erro'] = "Erro ao atualizar a imagem";
+    header('Location: ../Home/Perfil.php');
+    exit();
+}
+
+// Atualiza os dados da sessão (recarrega os dados do usuário)
+function Atualizar_sessao(){
+    if (!isset($_SESSION['ID'])) {
+        $_SESSION['erro'] = "Sessão inválida";
+        header('Location: ../Home/Perfil.php');
+        exit();
+    }
+    $ID = $_SESSION['ID'];
+    session_destroy();
+    session_start();
+    
+    $users = load_users();
+    foreach ($users as $user) {
+        if ($user['ID'] == $ID) {
+            $_SESSION['nome']      = $user['Nome'];
+            $_SESSION['email']     = $user['Email'];
+            $_SESSION['data_naci'] = $user['Data_naci'];
+            $_SESSION['niki']      = $user['Niki'];
+            $_SESSION['img']       = $user['Img'];
+            $_SESSION['ID']        = $user['ID'];
+            $_SESSION['sucesso']   = "Sessão atualizada com sucesso";
+            header('Location: ../Home/Perfil.php');
+            exit();
+        }
+    }
+    $_SESSION['erro'] = "Erro ao atualizar a sessão";
+    header('Location: ../Home/Perfil.php');
+    exit();
+}
+
+/* ========================================================
+   Funções para manipulação de imagens (upload)
+   ======================================================== */
 
 function Upload_IMG($ID, $file){
-    $con = conexao();
-    // Verificar se houve erro no upload
+    // Verifica se houve erro no upload
     if ($file['error'] !== UPLOAD_ERR_OK) {
         $_SESSION['erro'] = "Erro no upload do arquivo";
         header('Location: ../Home/Perfil.php');
         exit();
     }
-    // Verificar se o arquivo foi enviado
     if (!is_uploaded_file($file['tmp_name'])) {
         $_SESSION['erro'] = "Arquivo não encontrado";
         header('Location: ../Home/Perfil.php');
         exit();
     }
+    
     $extensoes_permitidas = ['gif', 'jpg', 'jpeg', 'png'];
     $extensao = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
 
@@ -113,43 +204,28 @@ function Upload_IMG($ID, $file){
         header('Location: ../Home/Perfil.php');
         exit();
     }
-
-    // Verifica se realmente é uma imagem
     if (!getimagesize($file['tmp_name'])) {
         $_SESSION['erro'] = "O arquivo enviado não é uma imagem válida.";
         header('Location: ../Home/Perfil.php');
         exit();
     }
-
-    // Verifica se a pasta do usuário existe
-    if (!file_exists("../Home/USERS/".$ID)) {
-        // Senão cria a pasta
-        mkdir("../Home/USERS/".$ID, 0755, true);
+    // Cria a pasta do usuário, se não existir
+    $userDir = "../Home/USERS/".$ID;
+    if (!file_exists($userDir)) {
+        mkdir($userDir, 0755, true);
     }
-    // Verifica se a pasta de imagens do usuário existe
-    if (!file_exists("../Home/USERS/".$ID."/IMGS/")) {
-        // Senão cria a pasta
-        mkdir("../Home/USERS/".$ID."/IMGS/", 0755, true);
+    // Cria a pasta de imagens do usuário, se não existir
+    $imgDir = $userDir."/IMGS/";
+    if (!file_exists($imgDir)) {
+        mkdir($imgDir, 0755, true);
     }
-    // Renomeia o arquivo
-    $ext = pathinfo($file['name'], PATHINFO_EXTENSION);
-    $fileName = $ID."_".time().".".$ext;
-    // Move o arquivo para a pasta de imagens do usuário
-    if (move_uploaded_file($file['tmp_name'], "../Home/USERS/".$ID."/IMGS/".$fileName)) {
-        // Atualiza o campo img do usuário
-        $sql = "UPDATE usuarios SET Img = ? WHERE ID = ?";
-        $stmt = $con->prepare($sql);
+    $fileName = $ID . "_" . time() . "." . $extensao;
+    $destino = $imgDir . $fileName;
+    
+    if (move_uploaded_file($file['tmp_name'], $destino)) {
+        // Atualiza o caminho da imagem no JSON
         $imgPath = "Home/USERS/".$ID."/IMGS/".$fileName;
-        $stmt->bind_param("si", $imgPath, $ID);
-        if ($stmt->execute()) {
-            $_SESSION['sucesso'] = "Upload realizado com sucesso";
-            header('Location: ../Home/Perfil.php');
-            exit();
-        } else {
-            $_SESSION['erro'] = "Erro ao atualizar";
-            header('Location: ../Home/Perfil.php');
-            exit();
-        }
+        Atualizar_img($ID, $imgPath);
     } else {
         $_SESSION['erro'] = "Erro ao mover o arquivo";
         header('Location: ../Home/Perfil.php');
@@ -157,247 +233,166 @@ function Upload_IMG($ID, $file){
     }
 }
 
-function Atualizar_sessao(){
-    session_start();
-    $ID = $_SESSION['ID']; // Armazena o ID antes de destruir a sessão
-    session_destroy();
-    session_start();
-    
-    $con = conexao();
-    $sql = "SELECT * FROM usuarios WHERE ID = ?";
-    $stmt = $con->prepare($sql);
-    $stmt->bind_param("i", $ID);
-    $stmt->execute();
-    $result = $stmt->get_result();
-    $row = $result->fetch_assoc();
-    
-    if($row){
-        $_SESSION['nome'] = $row['Nome'];
-        $_SESSION['email'] = $row['Email'];
-        $_SESSION['data_naci'] = $row['Data_naci'];
-        $_SESSION['niki'] = $row['Niki'];
-        $_SESSION['img'] = $row['Img'];
-        $_SESSION['ID'] = $row['ID'];
-        $_SESSION['sucesso'] = "Sessão atualizada com sucesso";
-        header('Location: Perfil.php');
-    } else {
-        $_SESSION['erro'] = "Erro ao atualizar a sessão";
-        header('Location: Perfil.php');
-    }
-}
+/* ========================================================
+   Funções para manipulação de posts via JSON
+   ======================================================== */
 
-function Atualizar_img($ID, $img){
-    $con = conexao();
-    $sql = "UPDATE usuarios SET Img = ? WHERE ID = ?";
-    $stmt = $con->prepare($sql);
-    $stmt->bind_param("si", $img, $ID);
-    $stmt->execute();
-    if($stmt->execute()){
-        $_SESSION['sucesso'] = "Imagem atualizada com sucesso";
-        header('Location: ../Home/Perfil.php');
-    }else{
-        $_SESSION['erro'] = "Erro ao atualizar a imagem";
-        header('Location: ../Home/Perfil.php');
-    }
-}
-
-// Função já declarada em Porteiro.php
-if (!function_exists('Pesquisar_img_user')) {
-    function Pesquisar_img_user($ID){
-        $con = conexao();
-        $sql = "SELECT * FROM usuarios WHERE ID = ?";
-        $stmt = $con->prepare($sql);
-        $stmt->bind_param("i", $ID);
-        $stmt->execute();
-        $result = $stmt->get_result();
-        $row = $result->fetch_assoc();
-        return $row['Img'];
-    }
-}
-
+// Gera uma string aleatória para o ID do post
 function randomico($length = 10) {
     return substr(str_shuffle("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"), 0, $length);
 }
 
+// Cria um template para o post com os dados do usuário
 function Tamplate_post($ID, $conteudo){
-    $con = conexao();
-    $sql = "SELECT * FROM usuarios WHERE ID = ?";
-    $stmt = $con->prepare($sql);
-    $stmt->bind_param("i", $ID);
-    $stmt->execute();
-    $result = $stmt->get_result();
-    $row = $result->fetch_assoc();
+    $nome  = Pesquisar_nome_user($ID);
+    $email = Pesquisar_email_user($ID);
     $post = array(
-        "ID_user" => $ID,
-        "ID_post" => randomico(),
-        "Nome" => $row['Nome'],
-        "Email" => $row['Email'],
-        "Conteudo" => $conteudo,
-        "Data" => date("Y-m-d H:i:s"),
-        "Like" => 0,
-        "Like_user" => array(),
-        "Dislike" => 0,
-        "Dislike_user" => array(),
-        "Comentario" => 0,
+        "ID_user"         => $ID,
+        "ID_post"         => randomico(),
+        "Nome"            => $nome,
+        "Email"           => $email,
+        "Conteudo"        => $conteudo,
+        "Data"            => date("Y-m-d H:i:s"),
+        "Like"            => 0,
+        "Like_user"       => array(),
+        "Dislike"         => 0,
+        "Dislike_user"    => array(),
+        "Comentario"      => 0,
         "Comentario_user" => array(),
+        "Comentarios"     => array()
     );
     return $post;
 }
 
+// Atualiza o arquivo principal com informações resumidas dos posts
 function Ultimos_posts($ID, $ID_post, $FILE_USER, $FILE){
-    // Verifica se o arquivo principal já existe
     if (file_exists($FILE)) {
         $posts = json_decode(file_get_contents($FILE), true);
     } else {
-        $posts = array(); // Cria um array vazio se o arquivo não existir
+        $posts = array();
     }
-
-    // Adiciona o novo post ao array
     $posts[] = array(
         "ID_user" => $ID,
-        "File" => $FILE_USER,
+        "File"    => $FILE_USER,
         "ID_post" => $ID_post,
     );
-
-    // Salva o array atualizado no arquivo JSON principal
-    file_put_contents($FILE, json_encode($posts));
+    file_put_contents($FILE, json_encode($posts, JSON_PRETTY_PRINT));
 }
 
+// Cria um novo post e o salva em arquivo JSON
 function NovoPost($ID, $conteudo){
-    $con = conexao();
-    $FILE = "../Home/USERS/Atualizacoes.json"; // Arquivo principal
+    $FILE = "../Home/USERS/Atualizacoes.json"; // Arquivo principal de atualizações
     $FILE_USER = "../Home/USERS/".$ID."/Puble/".time().".json"; // Arquivo do post
-
-    // Cria o diretório se não existir
-    if(!file_exists("../Home/USERS/".$ID."/Puble/")){
-        mkdir("../Home/USERS/".$ID."/Puble/", 0755, true);
+    
+    // Cria o diretório para os posts do usuário, se não existir
+    $userPostDir = "../Home/USERS/".$ID."/Puble/";
+    if (!file_exists($userPostDir)){
+        mkdir($userPostDir, 0755, true);
     }
-
-    // Cria o template do post
+    
     $post = Tamplate_post($ID, $conteudo);
-    $json = json_encode($post);
-
+    $json = json_encode($post, JSON_PRETTY_PRINT);
+    
     // Salva o post no arquivo do usuário
     file_put_contents($FILE_USER, $json);
-
+    
     // Atualiza o arquivo principal com o novo post
     Ultimos_posts($ID, $post['ID_post'], $FILE_USER, $FILE);
     header('Location: ../Home/Home.php');
+    exit();
 }
 
-function Pesquisar_nome_user($ID){
-    $con = conexao();
-    $sql = "SELECT Nome FROM usuarios WHERE ID = ?";
-    $stmt = $con->prepare($sql);
-    $stmt->bind_param("i", $ID);
-    $stmt->execute();
-    $result = $stmt->get_result();
-    $row = $result->fetch_assoc();
-    return $row['Nome'];
-}
-
-function Dislike($ID_user, $ID_post, $FILE){
-    $con = conexao();
-        //verificar se o arquivo existe 
-    if(file_exists($FILE)){
-        $posts = json_decode(file_get_contents($FILE), true);
-    }else{
-        $_SESSION['erro'] = "Erro ao curtir";
-        header('Location: ../Home/Home.php');
-        exit();
-    }
-    //verificar se o post existe
-    if(isset($posts[$ID_post])){
-        $posts[$ID_post]['Dislike']++;
-        $posts[$ID_post]['Dislike_user'][] = $ID_user;
-    }else{
-        $_SESSION['erro'] = "Erro ao curtir";
-        header('Location: ../Home/Home.php');
-        exit();
-    }
-    //salvar o post
-    file_put_contents($FILE, json_encode($posts));
-    header('Location: ../Home/Home.php');
-}   
-
+// Função para adicionar um "like" a um post
 function Like($ID_user, $ID_post, $FILE) {
-    // Verificar se o arquivo existe e está acessível
     if (!file_exists($FILE)) {
         $_SESSION['erro'] = "Erro ao curtir: Arquivo não encontrado.";
         header('Location: ../Home/Home.php');
         exit();
     }
-
-    // Carregar o conteúdo do arquivo JSON
-    $posts_json = file_get_contents($FILE);
-    $posts = json_decode($posts_json, true);
-
-    // Verificar se a decodificação do JSON foi bem-sucedida
+    $posts = json_decode(file_get_contents($FILE), true);
     if ($posts === null) {
         $_SESSION['erro'] = "Erro ao curtir: Dados inválidos no arquivo.";
         header('Location: ../Home/Home.php');
         exit();
     }
-
-    // Verificar se o post existe no arquivo
-    if (!isset($posts[$ID_post])) {
+    $found = false;
+    foreach($posts as &$post) {
+        if ($post['ID_post'] == $ID_post) {
+            $post['Like']++;
+            $post['Like_user'][] = $ID_user;
+            $found = true;
+            break;
+        }
+    }
+    if (!$found) {
         $_SESSION['erro'] = "Erro ao curtir: Post não encontrado.";
         header('Location: ../Home/Home.php');
         exit();
     }
-
-    // Adicionar o like e o usuário que deu o like
-    $posts[$ID_post]['Like']++;
-    $posts[$ID_post]['Like_user'][] = $ID_user;
-
-    // Salvar as modificações no arquivo
     if (file_put_contents($FILE, json_encode($posts, JSON_PRETTY_PRINT))) {
-        // Sucesso! Redirecionar para a página inicial
         header('Location: ../Home/Home.php');
         exit();
     } else {
-        // Erro ao salvar o arquivo
         $_SESSION['erro'] = "Erro ao curtir: Falha ao salvar o arquivo.";
         header('Location: ../Home/Home.php');
         exit();
     }
 }
 
-
-
-function Comentar($ID_user, $ID_post, $FILE, $comentario) {
-    $con = conexao();
-
-    // Verifica se o post e o usuário são válidos
-    if (!is_numeric($ID_post) || !is_numeric($ID_user)) {
-        $_SESSION['erro'] = "Dados inválidos";
-        header('Location: ../Home/Home.php');
-        exit();
-    }
-
-    // Verificar se o arquivo existe
+// Função para adicionar um "dislike" a um post
+function Dislike($ID_user, $ID_post, $FILE){
     if(file_exists($FILE)){
         $posts = json_decode(file_get_contents($FILE), true);
-    }else{
-        $_SESSION['erro'] = "Erro ao comentar";
+    } else {
+        $_SESSION['erro'] = "Erro ao reagir";
         header('Location: ../Home/Home.php');
         exit();
     }
+    $found = false;
+    foreach($posts as &$post) {
+        if ($post['ID_post'] == $ID_post) {
+            $post['Dislike']++;
+            $post['Dislike_user'][] = $ID_user;
+            $found = true;
+            break;
+        }
+    }
+    if (!$found) {
+        $_SESSION['erro'] = "Erro ao reagir";
+        header('Location: ../Home/Home.php');
+        exit();
+    }
+    file_put_contents($FILE, json_encode($posts, JSON_PRETTY_PRINT));
+    header('Location: ../Home/Home.php');
+    exit();
+}   
 
-    // Verificar se o post existe
-    if(isset($posts[$ID_post])) {
-        $posts[$ID_post]['Comentario']++;
-        $posts[$ID_post]['Comentario_user'][] = $ID_user;
-        $posts[$ID_post]['Comentarios'][] = $comentario; // Armazena o comentário
+// Função para adicionar um comentário a um post
+function Comentar($ID_user, $ID_post, $FILE, $comentario) {
+    if(file_exists($FILE)){
+        $posts = json_decode(file_get_contents($FILE), true);
     } else {
         $_SESSION['erro'] = "Erro ao comentar";
         header('Location: ../Home/Home.php');
         exit();
     }
-
-    // Salvar o post com o novo comentário
-    file_put_contents($FILE, json_encode($posts));
+    $found = false;
+    foreach($posts as &$post) {
+        if ($post['ID_post'] == $ID_post) {
+            $post['Comentario']++;
+            $post['Comentario_user'][] = $ID_user;
+            $post['Comentarios'][] = $comentario;
+            $found = true;
+            break;
+        }
+    }
+    if (!$found) {
+        $_SESSION['erro'] = "Erro ao comentar";
+        header('Location: ../Home/Home.php');
+        exit();
+    }
+    file_put_contents($FILE, json_encode($posts, JSON_PRETTY_PRINT));
     header('Location: ../Home/Home.php');
+    exit();
 }
-
 ?>

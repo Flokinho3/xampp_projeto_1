@@ -113,6 +113,7 @@ $FILES = glob("USERS/".$_SESSION['ID']."/IMGS/*");
       <h2>Informações Pessoais</h2>
       <div class="IMG_perfil">
         <img src="<?php echo $img; ?>" alt="Perfil">
+        <?php echo "<p>Caminho da imagem: " . $img . "</p>"; ?>
       </div>
       <div class="Perfil_info_item">
         <p id="nome">Nome: <?php echo $_SESSION['nome']; ?></p>
