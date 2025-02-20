@@ -1,94 +1,115 @@
+/* Reset básico */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* Estilo do corpo da página */
 body {
-    background-image: url("IMGS/Fundo_1.jpg");
-    background-size: cover;
-    background-position: center;
-    background-repeat: no-repeat;
-    color: white;
-    font-family: Arial, sans-serif;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    height: 100vh;
-    margin: 0;
-    padding: 0;
+  background: linear-gradient(135deg, #000000, #1a1a2e, #2a044a);
+  font-family: 'Comic Sans MS', cursive, sans-serif;
+  color: #fff;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  margin: 0;
 }
 
+/* Container principal */
 .container {
-    background-color: rgba(255, 255, 255, 0.1);
-    padding: 30px;
-    border-radius: 10px;
-    box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
-    width: 300px;
-    text-align: center;
+  background: rgba(0, 0, 0, 0.7);
+  padding: 20px;
+  border-radius: 15px;
+  box-shadow: 0 0 20px rgba(106, 13, 173, 0.8);
+  backdrop-filter: blur(10px);
+  width: 100%;
+  max-width: 400px;
+  text-align: center;
 }
 
+/* Título do formulário */
 h1 {
-    margin-bottom: 20px;
-    font-size: 24px;
+  font-size: 2.5rem;
+  margin-bottom: 20px;
+  color: #00ff00; /* Verde vibrante */
+  text-shadow: 0 0 10px #00ff00, 0 0 20px #00ff00; /* Sombra neon */
 }
 
+/* Estilo dos labels */
+label {
+  display: block;
+  margin-bottom: 5px;
+  font-size: 1.2rem;
+  color: #bb00ff; /* Roxo claro */
+  text-shadow: 0 0 5px #bb00ff; /* Sombra neon */
+}
+
+/* Estilo dos inputs */
 input[type="email"],
 input[type="password"] {
-    width: 100%;
-    padding: 10px;
-    margin-bottom: 15px;
-    border: none;
-    border-radius: 5px;
-    background-color: rgba(255, 255, 255, 0.2);
-    color: white;
-    font-size: 16px;
-}
-
-input[type="email"]::placeholder,
-input[type="password"]::placeholder {
-    color: #ccc;
+  width: 100%;
+  padding: 10px;
+  margin-bottom: 15px;
+  border: 2px solid #bb00ff; /* Roxo */
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.5);
+  color: #fff;
+  font-size: 1rem;
+  outline: none;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
 }
 
 input[type="email"]:focus,
 input[type="password"]:focus {
-    outline: none;
-    border: 1px solid #4CAF50;
-    background-color: rgba(255, 255, 255, 0.3);
+  border-color: #00ff00; /* Verde */
+  box-shadow: 0 0 10px #00ff00, 0 0 20px #00ff00; /* Sombra neon */
 }
 
-button[type="submit"] {
-    width: 100%;
-    padding: 10px;
-    background-color: #4CAF50;
-    color: white;
-    border: none;
-    border-radius: 5px;
-    font-size: 16px;
-    cursor: pointer;
-    transition: background-color 0.3s;
+/* Estilo do botão */
+.btn {
+  background: #bb00ff; /* Roxo */
+  color: #fff;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 10px;
+  font-size: 1.2rem;
+  cursor: pointer;
+  transition: background 0.3s ease, box-shadow 0.3s ease;
 }
 
-button[type="submit"]:hover {
-    background-color: #45a049;
+.btn:hover {
+  background: #00ff00; /* Verde */
+  box-shadow: 0 0 10px #00ff00, 0 0 20px #00ff00; /* Sombra neon */
 }
 
-a {
-    color: #4CAF50;
-    text-decoration: none;
-    display: block;
-    margin-top: 10px;
+/* Efeitos de estrelas */
+body::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%"><circle cx="10%" cy="20%" r="2" fill="white" /><circle cx="30%" cy="50%" r="1" fill="white" /><circle cx="70%" cy="10%" r="1" fill="white" /><circle cx="90%" cy="30%" r="2" fill="white" /><circle cx="50%" cy="80%" r="1" fill="white" /></svg>');
+  opacity: 0.3;
+  z-index: -1;
 }
 
-a:hover {
-    text-decoration: underline;
+/* Estilo dos links */
+.links {
+  margin-top: 15px;
+  font-size: 0.9rem;
+  color: #bb00ff; /* Roxo claro */
 }
 
-@media (max-width: 480px) {
-    .container {
-        width: 90%;
-        padding: 20px;
-    }
+.links a {
+  color: #bb00ff; /* Roxo claro */
+  text-decoration: none;
+  margin-right: 15px;
+}
 
-    h1 {
-        font-size: 20px;
-    }
-
-    button[type="submit"] {
-        font-size: 14px;
-    }
+.links a:hover {
+  color: #00ff00; /* Verde */
 }
